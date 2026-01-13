@@ -1,0 +1,236 @@
+@if (node.type === 'note') {
+       <!-- NOTE TEMPLATE -->
+       <div 
+          class="rounded-sm shadow-md transition-shadow duration-200 select-none cursor-grab active:cursor-grabbing group hover:shadow-lg relative overflow-hidden"
+          [style.background-color]="node.backgroundColor || '#fef3c7'"
+          [style.width.px]="nodeWidth || 200"
+          [style.height.px]="nodeHeight || 200"
+          [style.box-shadow]="isSelected ? '0 0 0 4px #3b82f666' : '2px 4px 6px rgba(0,0,0,0.1)'"
+          [attr.data-node-id]="node.id"
+          (mousedown)="onMouseDown($event)"
+          (touchstart)="onMouseDown($event)"
+          (click)="$event.stopPropagation()"
+       >
+         <div class="h-full w-full p-4 flex flex-col">
+            <textarea 
+               class="w-full h-full bg-transparent resize-none outline-none font-medium leading-relaxed font-sans placeholder-black/20"
+               [style.color]="node.nameColor || '#1e293b'"
+               placeholder="Escribe tu nota aquí..."
+               [value]="node.name"
+               (input)="onNoteInput($event)"
+               (mousedown)="$event.stopPropagation()"
+               (touchstart)="$event.stopPropagation()"
+            ></textarea>
+         </div>
+         @if (isSelected) {
+            <div class="resize-handle" (mousedown)="onResizeDown($event)" (touchstart)="onResizeDown($event)">
+                <span class="material-icons-round text-slate-400 text-[10px]">play_arrow</span>
+            </div>
+         }
+       </div>
+
+    } @else if (node.type === 'text') {
+       <!-- PLAIN TEXT TEMPLATE (NOW WITH SHAPE-LIKE STYLING) -->
+       <div 
+          class="transition-all duration-200 select-none cursor-grab active:cursor-grabbing group relative overflow-visible flex flex-col"
+          [style.width.px]="nodeWidth || 150"
+          [style.height.px]="nodeHeight || 50"
+          [style.background-color]="node.backgroundColor || 'transparent'"
+          [style.border-color]="node.borderColor || 'transparent'"
+          [style.border-width.px]="node.borderWidth || 0"
+          [style.border-style]="(node.borderWidth && node.borderWidth > 0) ? 'solid' : 'none'"
+          [style.border-radius.px]="node.borderRadius || 0"
+          [style.box-shadow]="isSelected ? '0 0 0 2px #3b82f6' : null"
+          [attr.data-node-id]="node.id"
+          (mousedown)="onMouseDown($event)"
+          (touchstart)="onMouseDown($event)"
+          (click)="$event.stopPropagation()"
+          (dblclick)="enterEditMode($event)"
+       >
+         @if (isEditing) {
+            <textarea 
+               #textInput
+               class="w-full h-full bg-transparent resize-none outline-none leading-normal p-2 overflow-hidden"
+               [style.color]="node.nameColor || '#0f172a'"
+               [style.font-size.px]="node.fontSize || 14"
+               [style.font-family]="node.fontFamily || 'sans-serif'"
+               [style.font-weight]="node.fontWeight || 'normal'"
+               [style.font-style]="node.fontStyle || 'normal'"
+               [style.text-decoration]="node.textDecoration || 'none'"
+               [style.text-align]="node.textAlign || 'left'"
+               placeholder="Escribe texto..."
+               [value]="node.name"
+               (input)="onNoteInput($event)"
+               (blur)="isEditing = false"
+               (mousedown)="$event.stopPropagation()"
+               (touchstart)="$event.stopPropagation()"
+            ></textarea>
+         } @else {
+            <div 
+              class="w-full h-full leading-normal p-2 overflow-hidden whitespace-pre-wrap break-words pointer-events-none"
+              [style.color]="node.nameColor || '#0f172a'"
+              [style.font-size.px]="node.fontSize || 14"
+              [style.font-family]="node.fontFamily || 'sans-serif'"
+              [style.font-weight]="node.fontWeight || 'normal'"
+              [style.font-style]="node.fontStyle || 'normal'"
+              [style.text-decoration]="node.textDecoration || 'none'"
+              [style.text-align]="node.textAlign || 'left'"
+            >
+              {{ node.name || 'Escribe texto...' }}
+            </div>
+         }
+          
+          @if (isSelected) {
+            <div class="resize-handle" (mousedown)="onResizeDown($event)" (touchstart)="onResizeDown($event)">
+                <span class="material-icons-round text-blue-500 text-[10px]">play_arrow</span>
+            </div>
+         }
+       </div>
+
+    } @else if (node.type === 'shape') {
+       <!-- SHAPE TEMPLATE -->
+       <div 
+          class="flex items-center justify-center transition-all duration-200 select-none cursor-grab active:cursor-grabbing group hover:shadow-md relative"
+          [style.width.px]="nodeWidth || 150"
+          [style.height.px]="nodeHeight || 150"
+          [attr.data-node-id]="node.id"
+          (mousedown)="onMouseDown($event)"
+          (touchstart)="onMouseDown($event)"
+          (click)="$event.stopPropagation()"
+       >
+           <!-- Inner Shape Div that gets the actual style -->
+           <div class="w-full h-full flex items-center justify-center overflow-hidden"
+               [style.background-color]="node.backgroundColor || '#ffffff'"
+               [style.border-color]="node.borderColor || '#94a3b8'"
+               [style.border-width.px]="hasBorder() ? (node.borderWidth || 2) : 0"
+               [style.border-style]="hasBorder() ? 'solid' : 'none'"
+               [style.border-radius.px]="getBorderRadius()"
+               [style.clip-path]="getClipPath()"
+               [style.box-shadow]="(isSelected && !getClipPath()) ? '0 0 0 4px #3b82f666' : null"
+           >
+              <input 
+                 class="w-full bg-transparent text-center outline-none font-bold relative z-10"
+                 [style.color]="node.nameColor || '#1e293b'"
+                 [value]="node.name"
+                 (input)="onNoteInput($event)"
+                 (mousedown)="$event.stopPropagation()"
+                 (touchstart)="$event.stopPropagation()"
+              >
+           </div>
+           
+           <!-- Selection Ring for clipped shapes -->
+           @if (isSelected && getClipPath()) {
+             <div class="absolute inset-0 border-2 border-blue-400 border-dashed pointer-events-none opacity-50"></div>
+           }
+
+           @if (isSelected) {
+             <div class="resize-handle" (mousedown)="onResizeDown($event)" (touchstart)="onResizeDown($event)">
+                <span class="material-icons-round text-slate-400 text-[10px]">play_arrow</span>
+            </div>
+         }
+       </div>
+    } @else if (node.type === 'group') {
+        <!-- GROUP/AREA TEMPLATE -->
+        <div 
+          class="relative transition-all duration-200 select-none cursor-grab active:cursor-grabbing group"
+          [style.width.px]="nodeWidth || 300"
+          [style.height.px]="nodeHeight || 300"
+          [attr.data-node-id]="node.id"
+          (mousedown)="onMouseDown($event)"
+          (touchstart)="onMouseDown($event)"
+          (click)="$event.stopPropagation()"
+        >
+          <!-- Floating Label - FORCE BG WHITE (No Dark Mode) -->
+          <div class="absolute -top-3 left-3 bg-white px-2 z-10 transition-colors">
+             <input 
+                 class="bg-transparent outline-none font-bold text-sm uppercase tracking-wider"
+                 [style.color]="node.nameColor || '#64748b'"
+                 [value]="node.name"
+                 (input)="onNoteInput($event)"
+                 (mousedown)="$event.stopPropagation()"
+                 (touchstart)="$event.stopPropagation()"
+              >
+          </div>
+
+          <!-- The container border -->
+          <div class="w-full h-full border-2 border-dashed rounded-lg"
+             [style.background-color]="node.backgroundColor || 'transparent'"
+             [style.border-color]="node.borderColor || '#cbd5e1'"
+             [style.box-shadow]="isSelected ? '0 0 0 4px #3b82f666' : null"
+          ></div>
+
+          @if (isSelected) {
+             <div class="resize-handle" (mousedown)="onResizeDown($event)" (touchstart)="onResizeDown($event)">
+                <span class="material-icons-round text-slate-400 text-[10px]">play_arrow</span>
+             </div>
+           }
+        </div>
+    } @else {
+       <!-- STANDARD CARD TEMPLATE (No Dark Mode classes) -->
+       <div 
+         class="rounded-xl shadow-sm border-2 transition-all duration-200 select-none cursor-grab active:cursor-grabbing group hover:shadow-md relative overflow-visible"
+         [style.width.px]="nodeWidth || 208"
+         [style.background-color]="node.backgroundColor || '#ffffff'"
+         [style.border-color]="node.borderColor || '#e2e8f0'"
+         [style.border-width.px]="node.borderWidth || 2"
+         [style.box-shadow]="isSelected ? '0 0 0 4px ' + (node.borderColor || '#e2e8f0') + '66' : null"
+         [attr.data-node-id]="node.id" 
+         (mousedown)="onMouseDown($event)"
+         (touchstart)="onMouseDown($event)"
+         (click)="$event.stopPropagation()"
+       >
+         <!-- Input Connector Dot (Top) -->
+         <div class="absolute -top-[9px] left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-slate-300 z-50 flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all">
+            <div class="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+         </div>
+   
+         <div class="p-4 flex flex-col items-center text-center">
+             @if (node.avatarType === 'image' && node.avatarImage) {
+                <img [src]="node.avatarImage" class="w-12 h-12 mb-2 rounded-full object-contain bg-white border border-slate-200 shadow-sm pointer-events-none" alt="Avatar">
+             } @else {
+               <div class="w-12 h-12 mb-2 rounded-full bg-slate-100 border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 pointer-events-none transition-colors">
+                  @if (isMaterialIcon(node.avatarIcon)) {
+                     <span class="material-icons-round text-2xl">{{ node.avatarIcon }}</span>
+                  } @else {
+                     <span class="text-2xl leading-none">{{ node.avatarIcon || 'person' }}</span>
+                  }
+               </div>
+             }
+             
+             <h3 class="font-bold text-sm leading-tight pointer-events-none"
+                 [style.color]="node.nameColor || '#1e293b'">
+                 {{ node.name }}
+             </h3>
+             
+             <p class="text-xs font-medium mt-1 pointer-events-none"
+                [style.color]="node.roleColor || '#64748b'">
+                {{ node.role }}
+             </p>
+             
+             @if (node.department) {
+                <span class="mt-2 text-[10px] uppercase tracking-wider font-semibold pointer-events-none"
+                      [style.color]="node.departmentColor || '#94a3b8'">
+                      {{ node.department }}
+                </span>
+             }
+   
+             @if (node.level) {
+                <div class="mt-2 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 truncate max-w-full transition-colors"
+                     title="{{node.level}}">
+                   {{ node.level.split(' - ')[0] }}
+                </div>
+             }
+         </div>
+   
+         <!-- Output Connector (Link Handle) -->
+         <div 
+            class="absolute -bottom-[11px] left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-white border-2 border-blue-500 flex items-center justify-center z-50 cursor-crosshair hover:scale-110 transition-all shadow-sm opacity-0 group-hover:opacity-100"
+            (mousedown)="onLinkMouseDown($event)"
+            (touchstart)="onLinkMouseDown($event)"
+            title="Drag to link to another node"
+         >
+           <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+         </div>
+       </div>
+    }
+  

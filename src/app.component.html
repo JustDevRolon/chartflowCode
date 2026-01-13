@@ -1,0 +1,864 @@
+<div class="flex flex-col h-full bg-slate-50 dark:bg-slate-950 select-none transition-colors duration-200" tabindex="0">
+  
+  <input type="file" #jsonImportInput class="hidden" (change)="onJsonFileSelected($event)" accept="application/json">
+
+  <!-- Header -->
+  <header class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-30 shrink-0 relative transition-colors duration-200">
+    <div class="flex items-center gap-4">
+      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/20">
+        <span class="material-icons-round text-white text-xl">account_tree</span>
+      </div>
+      <div>
+        <h1 class="font-bold text-slate-800 dark:text-slate-100 tracking-tight">ChartFlow</h1>
+      </div>
+      <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+      <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ getSelectedTypeName() }}</span>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Shortcuts Button -->
+      <button class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors" (click)="toggleShortcutsModal()" title="Atajos de Teclado">
+        <span class="material-icons-round text-xl">keyboard</span>
+      </button>
+      <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+
+      <!-- Undo / Redo -->
+      <button class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors" (click)="chartState.undo()" title="Deshacer (Ctrl+Z)">
+        <span class="material-icons-round text-xl">undo</span>
+      </button>
+      <button class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors" (click)="chartState.redo()" title="Rehacer (Ctrl+Y)">
+        <span class="material-icons-round text-xl">redo</span>
+      </button>
+      <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+
+      @if (currentType() !== 'whiteboard') {
+        <button 
+          class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800/50 rounded-md transition-colors mr-2" 
+          (click)="chartState.autoLayout()"
+        >
+          <span class="material-icons-round text-lg">auto_fix_high</span>
+          Alinear Niveles
+        </button>
+
+        <button class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors" (click)="addMember()">
+          <span class="material-icons-round text-lg">person_add</span>
+          <span class="hidden lg:inline">Añadir Miembro</span>
+        </button>
+        <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+      }
+      
+      <!-- Import Button -->
+      <button 
+        (click)="triggerJsonImport()"
+        class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+        title="Importar desde JSON"
+      >
+        <span class="material-icons-round text-lg">file_upload</span>
+        <span class="hidden lg:inline">Importar</span>
+      </button>
+
+      <!-- Export Dropdown -->
+      <div class="relative ml-2" #exportButtonContainer>
+        <button 
+          (click)="toggleExportMenu()" 
+          [disabled]="isExporting()"
+          class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md shadow-sm transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
+        >
+          @if (isExporting()) {
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Exportando...</span>
+          } @else {
+            <span class="material-icons-round text-lg">download</span>
+            <span class="hidden lg:inline">Exportar</span>
+            <span class="material-icons-round text-base transition-transform" [class.rotate-180]="isExportMenuOpen()">expand_more</span>
+          }
+        </button>
+
+        @if (isExportMenuOpen()) {
+          <div class="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <button (click)="exportAsJson()" class="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+              <span class="material-icons-round text-lg text-slate-500 dark:text-slate-400">data_object</span>
+              Exportar como JSON
+            </button>
+          </div>
+        }
+      </div>
+      
+      <!-- Dark Mode Toggle -->
+      <button (click)="chartState.toggleDarkMode()" class="ml-2 w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+        <span class="material-icons-round text-xl">{{ chartState.isDarkMode() ? 'light_mode' : 'dark_mode' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden relative">
+    
+    <!-- Sidebar Toggles -->
+    <button (click)="toggleLeftSidebar()" class="absolute top-1/2 -translate-y-1/2 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm w-6 h-16 rounded-r-lg border-y border-r border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all duration-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg focus:outline-none"
+      [style.left.px]="isLeftSidebarOpen() ? 256 : 0" title="Alternar barra lateral izquierda">
+      <span class="material-icons-round transition-transform text-slate-600 dark:text-slate-300" [class.rotate-180]="!isLeftSidebarOpen()">chevron_left</span>
+    </button>
+    <button (click)="toggleRightSidebar()" class="absolute top-1/2 -translate-y-1/2 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm w-6 h-16 rounded-l-lg border-y border-l border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all duration-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg focus:outline-none"
+      [style.right.px]="isRightSidebarOpen() ? 320 : 0" title="Alternar barra lateral derecha">
+      <span class="material-icons-round transition-transform text-slate-600 dark:text-slate-300" [class.rotate-180]="isRightSidebarOpen()">chevron_right</span>
+    </button>
+
+    <!-- Left Sidebar: Chart Types -->
+    <aside class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-20 transition-all duration-300"
+      [class.ml-[-16rem]]="!isLeftSidebarOpen()">
+      <div class="p-4 border-b border-slate-100 dark:border-slate-800">
+        <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tipo de Estructura</span>
+      </div>
+      <div class="p-2 space-y-1 overflow-y-auto flex-1">
+        @for (type of chartTypes; track type.id) {
+          <button 
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
+            [class]="currentType() === type.id 
+              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm ring-1 ring-blue-100 dark:ring-blue-800' 
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+            (click)="changeChartType(type.id)"
+          >
+            <span class="material-icons-round text-lg" [class.text-blue-500]="currentType() === type.id" [class.dark:text-blue-400]="currentType() === type.id">{{ type.icon }}</span>
+            {{ type.name }}
+          </button>
+        }
+      </div>
+      
+      <!-- Tip Box -->
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800">
+        <div class="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 border border-blue-100 dark:border-blue-800/30">
+          <h4 class="text-xs font-bold text-blue-700 dark:text-blue-300 mb-1">Consejo para {{ getSelectedTypeName() }}</h4>
+          <p class="text-xs text-blue-600/80 dark:text-blue-300/70 leading-relaxed">
+            Usa la <strong>rueda del ratón</strong> o <strong>pellizca</strong> para hacer zoom. <strong>Arrastra con dos dedos</strong> o usa <strong>Espacio</strong> para mover.
+          </p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Canvas -->
+    <main class="flex-1 bg-dot-pattern relative overflow-hidden flex flex-col outline-none w-full h-full bg-slate-50 dark:bg-slate-950 transition-colors duration-200"
+          [style.background-position]="chartState.panOffset().x + 'px ' + chartState.panOffset().y + 'px'"
+          [class.cursor-grab]="activeTool() === 'hand' || (isSpacePressed && !isPanning)"
+          [class.cursor-grabbing]="isPanning"
+          [class.cursor-crosshair]="activeTool() === 'pen' || activeTool() === 'eraser'"
+          [class.cursor-text]="activeTool() === 'text'"
+          [class.cursor-cell]="activeTool() === 'note' || activeTool() === 'shape' || activeTool() === 'group'"
+          #mainContainer
+          (wheel)="onWheel($event)"
+          (mousedown)="onCanvasMouseDown($event)"
+          (mousemove)="onCanvasMouseMove($event)"
+          (mouseup)="onCanvasMouseUp($event)"
+          (touchstart)="onCanvasMouseDown($event)"
+          (touchmove)="onCanvasMouseMove($event)"
+          (touchend)="onCanvasMouseUp($event)"
+          (touchcancel)="onCanvasMouseUp($event)"
+          (mouseenter)="onMouseEnter()"
+          (mouseleave)="onMouseLeave()">
+      
+      <!-- Infinite Canvas Content Area -->
+      <div #canvasContent
+           class="absolute top-0 left-0 w-full h-full transform origin-top-left"
+           [style.transform]="'translate(' + chartState.panOffset().x + 'px, ' + chartState.panOffset().y + 'px) scale(' + (chartState.zoomLevel() / 100) + ')'">
+        
+        <!-- Drawing Layer (NOW Z-60: Above everything else) -->
+        <svg class="absolute top-0 left-0 w-1 h-1 overflow-visible z-[60] pointer-events-none">
+           @for (drawing of chartState.drawings(); track drawing.id) {
+             <!-- Fat invisible path for easier clicking/erasing (pointer-events-auto to capture clicks) -->
+             <path 
+               [attr.d]="drawing.path"
+               fill="none"
+               stroke="transparent"
+               [attr.stroke-width]="15"
+               class="cursor-pointer pointer-events-auto"
+               (mousedown)="onDrawingMouseDown($event, drawing.id)"
+               (touchstart)="onDrawingMouseDown($event, drawing.id)"
+             />
+             
+             <!-- Actual Drawing -->
+             <path 
+               [attr.d]="drawing.path"
+               fill="none"
+               [attr.stroke]="drawing.color"
+               [attr.stroke-width]="drawing.strokeWidth"
+               stroke-linecap="round"
+               stroke-linejoin="round"
+               class="pointer-events-none transition-all duration-100"
+               [style.filter]="chartState.selectedDrawingIds().has(drawing.id) ? 'drop-shadow(0 0 3px #3b82f6)' : null"
+               [attr.stroke-dasharray]="chartState.selectedDrawingIds().has(drawing.id) ? '5,5' : null"
+             />
+           }
+           <!-- Current Drawing Preview -->
+           @if (isDrawing && currentPathString) {
+              <path 
+                [attr.d]="currentPathString"
+                fill="none"
+                [attr.stroke]="toolColor()"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+           }
+        </svg>
+
+        <!-- SVG Layer for Connections -->
+        <svg class="absolute top-0 left-0 w-1 h-1 overflow-visible z-[5] pointer-events-auto">
+             <defs>
+               <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                 <polygon points="0 0, 10 3.5, 0 7" [attr.fill]="chartState.isDarkMode() ? '#94a3b8' : '#64748b'" />
+               </marker>
+               <marker id="arrowhead-selected" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                 <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+               </marker>
+             </defs>
+             
+             @for (edge of edgesWithPath(); track edge.id) {
+                <!-- Invisible Fat Path for easier clicking -->
+                <path 
+                  [attr.d]="edge.path"
+                  fill="none" 
+                  stroke="transparent" 
+                  stroke-width="20"
+                  class="cursor-pointer"
+                  (click)="onEdgeClick($event, edge.id)"
+                />
+                <!-- Visible Path -->
+                <path 
+                  [attr.d]="edge.path"
+                  fill="none" 
+                  [attr.stroke-width]="chartState.selectedEdgeId() === edge.id ? 3 : 2"
+                  [attr.marker-end]="chartState.selectedEdgeId() === edge.id ? 'url(#arrowhead-selected)' : 'url(#arrowhead)'"
+                  [attr.stroke]="chartState.selectedEdgeId() === edge.id ? '#3b82f6' : (chartState.isDarkMode() ? '#94a3b8' : '#64748b')"
+                  class="pointer-events-none transition-colors duration-200"
+                />
+             }
+
+             <!-- Ghost Line (Creating Link) -->
+             @if (isLinking && linkStartPos) {
+               <path 
+                 [attr.d]="getGhostPath()"
+                 fill="none" 
+                 stroke="#3b82f6" 
+                 stroke-width="2"
+                 stroke-dasharray="5,5"
+                 marker-end="url(#arrowhead-selected)"
+               />
+             }
+        </svg>
+
+        <!-- Nodes Layer -->
+        @for (item of chartState.flatNodes(); track item.data.id) {
+           <app-chart-node 
+              [node]="item.data"
+              [isSelected]="chartState.selectedNodeIds().has(item.data.id)"
+              [nodeWidth]="item.width"
+              [nodeHeight]="item.height"
+              [style.transform]="'translate(' + item.x + 'px, ' + item.y + 'px)'"
+              class="transition-transform duration-75 ease-out"
+              [class.z-0]="item.data.type === 'group'"
+              [class.z-10]="item.data.type !== 'group'"
+              [class.z-50]="isDraggingNode && dragNodeId === item.data.id"
+              (nodeDown)="onNodeMouseDown($event, item.data.id)"
+              (linkStart)="onLinkStart($event, item.data.id)"
+              (dimensionsChange)="onNodeDimensionsChange($event, item.data.id)"
+              (textChange)="onNodeTextChange($event, item.data.id)"
+           ></app-chart-node>
+        }
+
+      </div>
+
+      <!-- Selection Box Overlay -->
+      @if (selectionBox) {
+        <div class="absolute bg-blue-500/20 border border-blue-500 pointer-events-none z-50"
+             [style.left.px]="selectionBox.left"
+             [style.top.px]="selectionBox.top"
+             [style.width.px]="selectionBox.width"
+             [style.height.px]="selectionBox.height">
+        </div>
+      }
+
+      <!-- Bottom Toolbar (Combined Controls) -->
+      <div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-2xl rounded-2xl p-2 flex flex-col items-center gap-2 z-50 border border-slate-200 dark:border-slate-700 transition-all duration-300 max-w-[95vw]"
+           (mousedown)="$event.stopPropagation()">
+         
+         <!-- Top Row: Tools -->
+         <div class="flex items-center flex-wrap justify-center gap-1 px-2">
+            <button class="p-2 rounded-lg transition-colors relative group"
+               [class]="activeTool() === 'hand' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+               (click)="setTool('hand')" title="Herramienta de Mano">
+               <span class="material-icons-round">pan_tool</span>
+            </button>
+            <button class="p-2 rounded-lg transition-colors relative group"
+               [class]="activeTool() === 'select' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+               (click)="setTool('select')" title="Herramienta de Selección">
+               <span class="material-icons-round">near_me</span>
+            </button>
+            <div class="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+            <!-- NEW GROUP TOOL -->
+            <button class="p-2 rounded-lg transition-colors relative group"
+               [class]="activeTool() === 'group' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+               (click)="setTool('group')" title="Añadir Área / Grupo">
+               <span class="material-icons-round">tab_unselected</span>
+            </button>
+            <button class="p-2 rounded-lg transition-colors relative group"
+               [class]="activeTool() === 'shape' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+               (click)="setTool('shape')" title="Añadir Forma">
+               <span class="material-icons-round">check_box_outline_blank</span>
+            </button>
+            <button class="p-2 rounded-lg transition-colors relative group"
+               [class]="activeTool() === 'text' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+               (click)="setTool('text')" title="Añadir Texto">
+               <span class="material-icons-round">text_fields</span>
+            </button>
+            <button class="p-2 rounded-lg transition-colors relative group"
+               [class]="activeTool() === 'note' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+               (click)="setTool('note')" title="Añadir Nota Adhesiva">
+               <span class="material-icons-round">sticky_note_2</span>
+            </button>
+            <button class="p-2 rounded-lg transition-colors relative group"
+               [class]="activeTool() === 'pen' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+               (click)="setTool('pen')" title="Dibujo Libre (Lápiz)">
+               <span class="material-icons-round">draw</span>
+            </button>
+            <button class="p-2 rounded-lg transition-colors relative group"
+               [class]="activeTool() === 'eraser' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+               (click)="setTool('eraser')" title="Borrador">
+               <span class="material-icons-round">auto_fix_normal</span>
+            </button>
+            <div class="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+            <!-- Zoom Controls moved here -->
+            <button class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" (click)="zoomOut()">
+               <span class="material-icons-round text-lg">remove</span>
+            </button>
+            <span class="text-xs font-bold w-10 text-center tabular-nums text-slate-700 dark:text-slate-200">{{ chartState.zoomLevel() }}%</span>
+            <button class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" (click)="zoomIn()">
+               <span class="material-icons-round text-lg">add</span>
+            </button>
+            <button class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" (click)="zoomToFit()" title="Ajustar a Pantalla">
+               <span class="material-icons-round text-lg">fit_screen</span>
+            </button>
+            <button class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" (click)="resetZoom()" title="Reiniciar Zoom">
+               <span class="material-icons-round text-lg">filter_center_focus</span>
+            </button>
+         </div>
+
+         <!-- Color Picker Row (Only visible for Note/Shape/Pen/Group/Text) -->
+         @if (['note', 'shape', 'pen', 'group', 'text'].includes(activeTool())) {
+            <div class="w-full h-px bg-slate-100 dark:bg-slate-800"></div>
+            <div class="flex items-center justify-center flex-wrap gap-1.5 pt-1 w-full px-2 pb-1">
+               
+               @if (activeTool() === 'shape') {
+                   @for (shape of availableShapes; track shape.id) {
+                     <button 
+                        class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
+                        [class.text-blue-600]="selectedShapeType() === shape.id"
+                        [class.dark:text-blue-400]="selectedShapeType() === shape.id"
+                        [class.bg-blue-50]="selectedShapeType() === shape.id"
+                        [class.dark:bg-blue-900/30]="selectedShapeType() === shape.id"
+                        (click)="setShapeToolType(shape.id)"
+                        [title]="shape.label"
+                     >
+                       <span class="material-icons-round text-lg">{{ shape.icon }}</span>
+                     </button>
+                   }
+                   <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+               }
+
+               @for (color of rainbowColors; track color.value) {
+                  <button 
+                     class="w-5 h-5 rounded-full border border-slate-200 dark:border-slate-700 transition-transform hover:scale-110 shadow-sm"
+                     [style.background-color]="color.value"
+                     [class.ring-2]="toolColor() === color.value"
+                     [class.ring-offset-1]="toolColor() === color.value"
+                     [class.ring-blue-400]="toolColor() === color.value"
+                     [class.dark:ring-offset-slate-900]="toolColor() === color.value"
+                     (click)="setToolColor(color.value)"
+                     [title]="color.name"
+                  ></button>
+               }
+               <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+               <!-- Pastels -->
+               @for (color of pastelColors; track color.value) {
+                  <button 
+                     class="w-5 h-5 rounded-full border border-slate-200 dark:border-slate-700 transition-transform hover:scale-110 shadow-sm"
+                     [style.background-color]="color.value"
+                     [class.ring-2]="toolColor() === color.value"
+                     [class.ring-offset-1]="toolColor() === color.value"
+                     [class.ring-blue-400]="toolColor() === color.value"
+                     [class.dark:ring-offset-slate-900]="toolColor() === color.value"
+                     (click)="setToolColor(color.value)"
+                     [title]="color.name"
+                  ></button>
+               }
+               <!-- Neons -->
+               <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+               @for (color of neonColors; track color.value) {
+                  <button 
+                     class="w-5 h-5 rounded-full border border-slate-200 dark:border-slate-700 transition-transform hover:scale-110 shadow-sm"
+                     [style.background-color]="color.value"
+                     [class.ring-2]="toolColor() === color.value"
+                     [class.ring-offset-1]="toolColor() === color.value"
+                     [class.ring-blue-400]="toolColor() === color.value"
+                     [class.dark:ring-offset-slate-900]="toolColor() === color.value"
+                     (click)="setToolColor(color.value)"
+                     [title]="color.name"
+                  ></button>
+               }
+            </div>
+         }
+      </div>
+
+      <!-- Minimap positioned at bottom right -->
+      <div class="absolute bottom-6 right-6 z-40">
+        <app-minimap [containerWidth]="canvasWidth()" [containerHeight]="canvasHeight()"></app-minimap>
+      </div>
+
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 overflow-y-auto shrink-0 z-20 shadow-[-4px_0_24px_-12px_rgba(0,0,0,0.1)] transition-all duration-300"
+      [class.mr-[-20rem]]="!isRightSidebarOpen()">
+      @if (chartState.selectionCount() > 1) {
+         <div class="p-6 h-full flex flex-col items-center justify-center text-center">
+            <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4">
+              <span class="material-icons-round text-3xl text-blue-500">layers</span>
+            </div>
+            <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ chartState.selectionCount() }} Elementos Seleccionados</h2>
+            <button 
+                (click)="deleteNode()"
+                class="mt-6 w-full py-2.5 rounded border border-red-200 dark:border-red-900/30 text-red-500 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center justify-center gap-2"
+              >
+                 <span class="material-icons-round text-lg">delete_outline</span>
+                 Eliminar Selección
+              </button>
+         </div>
+      } @else if (chartState.selectedNode(); as node) {
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+              <span class="material-icons-round text-blue-500">settings</span>
+              @if (node.type === 'note') { Propiedades de Nota } @else if (node.type === 'shape') { Propiedades de Forma } @else if (node.type === 'group') { Propiedades de Área } @else if (node.type === 'text') { Propiedades de Texto } @else { Propiedades de Nodo }
+            </h2>
+          </div>
+          <div class="space-y-4">
+              
+              <!-- Shape specific properties -->
+              @if (node.type === 'shape') {
+                  <div class="pb-4 border-b border-slate-100 dark:border-slate-800">
+                      <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Tipo de Forma</label>
+                      <div class="grid grid-cols-5 gap-2">
+                        @for (shape of availableShapes; track shape.id) {
+                           <button 
+                             class="flex items-center justify-center py-2 rounded border transition-all"
+                             [class]="node.shapeType === shape.id ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400' : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400'"
+                             (click)="updateShapeType(shape.id)"
+                             [title]="shape.label"
+                           >
+                             <span class="material-icons-round">{{ shape.icon }}</span>
+                           </button>
+                        }
+                      </div>
+                  </div>
+              }
+
+              <!-- Content Section -->
+              <div class="pb-4 border-b border-slate-100 dark:border-slate-800">
+                 <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                    @if (node.type === 'group') { Nombre del Área } @else if (node.type === 'text') { Contenido } @else { Contenido de Texto }
+                 </label>
+                 @if (node.type === 'note' || node.type === 'text') {
+                   <textarea [value]="node.name" (focus)="chartState.saveHistory()" (input)="updateName($event)" class="w-full h-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-800 dark:text-slate-100"></textarea>
+                 } @else {
+                   <input type="text" [value]="node.name" (focus)="chartState.saveHistory()" (input)="updateName($event)" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100">
+                 }
+              </div>
+
+              <!-- Typography Section for Text Nodes -->
+              @if (node.type === 'text') {
+                  <div class="pb-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
+                      <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tipografía</label>
+                      
+                      <!-- Font Family & Size -->
+                      <div class="flex gap-2">
+                         <select [value]="node.fontFamily || 'sans-serif'" (change)="updateTypography('fontFamily', $event)" class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-1.5 px-2 text-xs outline-none">
+                            <option value="sans-serif">Sans Serif</option>
+                            <option value="serif">Serif</option>
+                            <option value="monospace">Monospace</option>
+                            <option value="'Courier New', Courier, monospace">Courier</option>
+                            <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                            <option value="'Brush Script MT', cursive">Handwriting</option>
+                         </select>
+                         <input type="number" [value]="node.fontSize || 14" (change)="updateTypography('fontSize', $event)" class="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-1.5 px-2 text-xs outline-none" min="8" max="100">
+                      </div>
+
+                      <!-- Style Toggles -->
+                      <div class="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-md">
+                         <button (click)="toggleFontStyle('bold')" [class.bg-white]="node.fontWeight === 'bold'" [class.dark:bg-slate-700]="node.fontWeight === 'bold'" [class.shadow-sm]="node.fontWeight === 'bold'" class="flex-1 py-1 rounded text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50">
+                             <span class="material-icons-round text-sm">format_bold</span>
+                         </button>
+                         <button (click)="toggleFontStyle('italic')" [class.bg-white]="node.fontStyle === 'italic'" [class.dark:bg-slate-700]="node.fontStyle === 'italic'" [class.shadow-sm]="node.fontStyle === 'italic'" class="flex-1 py-1 rounded text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50">
+                             <span class="material-icons-round text-sm">format_italic</span>
+                         </button>
+                         <button (click)="toggleFontStyle('underline')" [class.bg-white]="node.textDecoration === 'underline'" [class.dark:bg-slate-700]="node.textDecoration === 'underline'" [class.shadow-sm]="node.textDecoration === 'underline'" class="flex-1 py-1 rounded text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50">
+                             <span class="material-icons-round text-sm">format_underlined</span>
+                         </button>
+                      </div>
+                  </div>
+              }
+
+              @if (node.type !== 'note' && node.type !== 'shape' && node.type !== 'group' && node.type !== 'text') {
+                  <!-- Standard Node Identity Section -->
+                  <div class="space-y-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <!-- Avatar Controls -->
+                    <div class="mb-4">
+                       <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Tipo de Avatar</label>
+                       <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-md mb-3">
+                          <button class="flex-1 py-1 text-xs font-medium rounded transition-colors"
+                                  [class]="node.avatarType === 'image' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'"
+                                  (click)="setAvatarType('image')">Imagen</button>
+                          <button class="flex-1 py-1 text-xs font-medium rounded transition-colors"
+                                  [class]="node.avatarType === 'icon' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'"
+                                  (click)="setAvatarType('icon')">Icono</button>
+                       </div>
+                       
+                       @if (node.avatarType === 'image') {
+                         <div>
+                           <!-- Preview Large -->
+                           @if (node.avatarImage) {
+                             <div class="w-full h-32 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                                <img [src]="node.avatarImage" class="w-full h-full object-contain">
+                             </div>
+                           }
+    
+                           <label class="block text-[10px] text-slate-400 font-semibold mb-1">URL de Imagen</label>
+                           <input type="text" [value]="node.avatarImage || ''" (focus)="chartState.saveHistory()" (input)="updateAvatarUrl($event)" placeholder="https://..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-2 font-mono text-xs text-slate-800 dark:text-slate-100">
+                           
+                           <input type="file" #fileInput class="hidden" (change)="onFileSelected($event)" accept="image/*">
+                           <button (click)="triggerFileUpload()" class="w-full py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-2">
+                             <span class="material-icons-round text-sm">upload_file</span>
+                             Subir Imagen
+                           </button>
+                         </div>
+                       } @else {
+                         <div>
+                            <!-- Emoji Presets Container -->
+                            <div class="border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 overflow-hidden mb-3">
+                               <div class="h-48 overflow-y-auto p-2 scrollbar-thin">
+                                 @for (category of emojiCategories; track category.name) {
+                                   <div class="mb-3">
+                                     <h5 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">{{category.name}}</h5>
+                                     <div class="grid grid-cols-6 gap-1">
+                                       @for (emoji of category.emojis; track emoji) {
+                                          <button 
+                                            class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-lg transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-600"
+                                            [class.bg-white]="node.avatarIcon === emoji"
+                                            [class.dark:bg-slate-700]="node.avatarIcon === emoji"
+                                            [class.shadow-sm]="node.avatarIcon === emoji"
+                                            [class.border-slate-200]="node.avatarIcon === emoji"
+                                            [class.dark:border-slate-600]="node.avatarIcon === emoji"
+                                            (click)="selectEmoji(emoji)"
+                                            title="{{emoji}}"
+                                          >
+                                            @if (emoji.length > 3) {
+                                              <!-- Fallback for material icon names in presets -->
+                                              <span class="material-icons-round text-lg text-slate-600 dark:text-slate-300">{{emoji}}</span>
+                                            } @else {
+                                              {{emoji}}
+                                            }
+                                          </button>
+                                       }
+                                     </div>
+                                   </div>
+                                 }
+                               </div>
+                            </div>
+                            
+                            <label class="block text-[10px] text-slate-400 font-semibold mb-1">Entrada Manual (Emoji o Nombre de Icono)</label>
+                            <div class="flex gap-2">
+                                <input type="text" [value]="node.avatarIcon || ''" (focus)="chartState.saveHistory()" (input)="updateAvatarIcon($event)" placeholder="e.g. face" class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100">
+                                <div class="w-9 h-9 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                    @if (node.avatarIcon && node.avatarIcon.length > 2) {
+                                      <span class="material-icons-round text-slate-600 dark:text-slate-300">{{node.avatarIcon}}</span>
+                                    } @else {
+                                      <span class="text-xl">{{node.avatarIcon || '?'}}</span>
+                                    }
+                                </div>
+                            </div>
+                         </div>
+                       }
+                    </div>
+    
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Rol / Posición</label>
+                      <input type="text" [value]="node.role" (focus)="chartState.saveHistory()" (input)="updateRole($event)" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100">
+                    </div>
+                     <div>
+                      <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Departamento / Área</label>
+                      <input type="text" [value]="node.department || ''" (focus)="chartState.saveHistory()" (input)="updateDepartment($event)" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100">
+                    </div>
+                  </div>
+                  
+                  <!-- Level Section -->
+                  <div class="pb-4 border-b border-slate-100 dark:border-slate-800">
+                     <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nivel</label>
+                     <select (focus)="chartState.saveHistory()" (change)="updateLevel($event)" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100">
+                        <option value="" [selected]="!node.level">Seleccionar Nivel...</option>
+                        @for (level of levels; track level) {
+                            <option [value]="level" [selected]="node.level === level">{{level}}</option>
+                        }
+                     </select>
+                  </div>
+              }
+
+              <!-- Styling Section -->
+              <div class="space-y-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <span class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Estilo</span>
+                
+                <div class="grid grid-cols-2 gap-3">
+                   <!-- Background Color Control: Visible for everyone now including text -->
+                   <div>
+                      <label class="text-[10px] text-slate-400 font-semibold mb-1 block">Fondo</label>
+                      @if (node.type === 'group') {
+                          <!-- Presets for Group -->
+                          <div class="flex flex-wrap gap-1 mb-2">
+                              @for (color of rainbowColors; track color.value) {
+                                  <button (click)="setColor('backgroundColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                              }
+                              @for (color of pastelColors; track color.value) {
+                                  <button (click)="setColor('backgroundColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                              }
+                              @for (color of neonColors; track color.value) {
+                                  <button (click)="setColor('backgroundColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                              }
+                          </div>
+                          <!-- Free picker for Group -->
+                          <div class="flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded p-1 h-9">
+                             <div class="relative w-8 h-full rounded overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer shrink-0">
+                                 <input type="color" [value]="node.backgroundColor || '#ffffff'" (focus)="chartState.saveHistory()" (input)="updateColor('backgroundColor', $event)" class="absolute -top-2 -left-2 w-16 h-16 cursor-pointer opacity-0">
+                                 <div class="w-full h-full" [style.background-color]="node.backgroundColor || '#ffffff'"></div>
+                             </div>
+                             <input type="text" [value]="node.backgroundColor || '#ffffff'" (focus)="chartState.saveHistory()" (input)="updateColorHex('backgroundColor', $event)" class="w-full text-xs font-mono outline-none text-slate-700 dark:text-slate-300 bg-transparent uppercase" maxlength="7">
+                          </div>
+                      } @else {
+                          <!-- Rainbow Palette for Standard Nodes & Text -->
+                          <div class="flex flex-wrap gap-1">
+                              @for (color of rainbowColors; track color.value) {
+                                  <button (click)="setColor('backgroundColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                              }
+                              @for (color of pastelColors; track color.value) {
+                                  <button (click)="setColor('backgroundColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                              }
+                              @for (color of neonColors; track color.value) {
+                                  <button (click)="setColor('backgroundColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                              }
+                               <button (click)="setColor('backgroundColor', '#ffffff')" style="background-color: #ffffff" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" title="White"></button>
+                               <!-- Transparent option useful for text -->
+                               <button (click)="setColor('backgroundColor', 'transparent')" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform bg-transparent relative overflow-hidden" title="Transparent">
+                                   <div class="absolute inset-0 border-r border-red-500 transform rotate-45 scale-150 origin-center"></div>
+                               </button>
+                          </div>
+                      }
+                   </div>
+                   
+                   <!-- Border Color: Visible for everyone except Note (Note uses shadow usually) -->
+                   @if (node.type !== 'note') {
+                       <div>
+                          <label class="text-[10px] text-slate-400 font-semibold mb-1 block">Color de Borde</label>
+                           @if (node.type === 'group') {
+                               <!-- Presets for Group -->
+                               <div class="flex flex-wrap gap-1 mb-2">
+                                  @for (color of rainbowColors; track color.value) {
+                                      <button (click)="setColor('borderColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                                  }
+                                  @for (color of pastelColors; track color.value) {
+                                      <button (click)="setColor('borderColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                                  }
+                                  @for (color of neonColors; track color.value) {
+                                      <button (click)="setColor('borderColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                                  }
+                               </div>
+                               <!-- Free picker for Group -->
+                               <div class="flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded p-1 h-9">
+                                 <div class="relative w-8 h-full rounded overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer shrink-0">
+                                     <input type="color" [value]="node.borderColor || '#e2e8f0'" (focus)="chartState.saveHistory()" (input)="updateColor('borderColor', $event)" class="absolute -top-2 -left-2 w-16 h-16 cursor-pointer opacity-0">
+                                     <div class="w-full h-full" [style.background-color]="node.borderColor || '#e2e8f0'"></div>
+                                 </div>
+                                 <input type="text" [value]="node.borderColor || '#e2e8f0'" (focus)="chartState.saveHistory()" (input)="updateColorHex('borderColor', $event)" class="w-full text-xs font-mono outline-none text-slate-700 dark:text-slate-300 bg-transparent uppercase" maxlength="7">
+                              </div>
+                           } @else {
+                              <!-- Rainbow Palette for Standard Nodes -->
+                              <div class="flex flex-wrap gap-1">
+                                  @for (color of rainbowColors; track color.value) {
+                                      <button (click)="setColor('borderColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                                  }
+                                  @for (color of pastelColors; track color.value) {
+                                      <button (click)="setColor('borderColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                                  }
+                                  @for (color of neonColors; track color.value) {
+                                      <button (click)="setColor('borderColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                                  }
+                                  <button (click)="setColor('borderColor', '#cbd5e1')" style="background-color: #cbd5e1" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" title="Slate"></button>
+                                  <button (click)="setColor('borderColor', 'transparent')" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform bg-transparent relative overflow-hidden" title="Transparent">
+                                       <div class="absolute inset-0 border-r border-red-500 transform rotate-45 scale-150 origin-center"></div>
+                                  </button>
+                              </div>
+                           }
+                       </div>
+                   }
+
+                   <div>
+                      <label class="text-[10px] text-slate-400 font-semibold mb-1 block">Color de Texto</label>
+                      
+                       <!-- Presets for Text -->
+                       @if (node.type === 'text') {
+                          <div class="flex flex-wrap gap-1 mb-2">
+                              <button (click)="setColor('nameColor', '#0f172a')" style="background-color: #0f172a" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" title="Black"></button>
+                              <button (click)="setColor('nameColor', '#ffffff')" style="background-color: #ffffff" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" title="White"></button>
+                              @for (color of rainbowColors; track color.value) {
+                                  <button (click)="setColor('nameColor', color.value)" [style.background-color]="color.value" class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform" [title]="color.name"></button>
+                              }
+                          </div>
+                       }
+
+                      <div class="flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded p-1 h-9">
+                         <div class="relative w-8 h-full rounded overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer shrink-0">
+                             <input type="color" [value]="node.nameColor || '#1e293b'" (focus)="chartState.saveHistory()" (input)="updateColor('nameColor', $event)" class="absolute -top-2 -left-2 w-16 h-16 cursor-pointer opacity-0">
+                             <div class="w-full h-full" [style.background-color]="node.nameColor || '#1e293b'"></div>
+                         </div>
+                         <input type="text" [value]="node.nameColor || '#1e293b'" (focus)="chartState.saveHistory()" (input)="updateColorHex('nameColor', $event)" class="w-full text-xs font-mono outline-none text-slate-700 dark:text-slate-300 bg-transparent uppercase" maxlength="7">
+                      </div>
+                   </div>
+                   
+                   @if (node.type !== 'note' && node.type !== 'shape' && node.type !== 'group' && node.type !== 'text') {
+                       <div>
+                          <label class="text-[10px] text-slate-400 font-semibold mb-1 block">Color de Rol</label>
+                           <div class="flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded p-1 h-9">
+                             <div class="relative w-8 h-full rounded overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer shrink-0">
+                                 <input type="color" [value]="node.roleColor || '#64748b'" (focus)="chartState.saveHistory()" (input)="updateColor('roleColor', $event)" class="absolute -top-2 -left-2 w-16 h-16 cursor-pointer opacity-0">
+                                 <div class="w-full h-full" [style.background-color]="node.roleColor || '#64748b'"></div>
+                             </div>
+                             <input type="text" [value]="node.roleColor || '#64748b'" (focus)="chartState.saveHistory()" (input)="updateColorHex('roleColor', $event)" class="w-full text-xs font-mono outline-none text-slate-700 dark:text-slate-300 bg-transparent uppercase" maxlength="7">
+                          </div>
+                       </div>
+                       <div>
+                          <label class="text-[10px] text-slate-400 font-semibold mb-1 block">Color de Área</label>
+                           <div class="flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded p-1 h-9">
+                             <div class="relative w-8 h-full rounded overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer shrink-0">
+                                 <input type="color" [value]="node.departmentColor || '#94a3b8'" (focus)="chartState.saveHistory()" (input)="updateColor('departmentColor', $event)" class="absolute -top-2 -left-2 w-16 h-16 cursor-pointer opacity-0">
+                                 <div class="w-full h-full" [style.background-color]="node.departmentColor || '#94a3b8'"></div>
+                             </div>
+                             <input type="text" [value]="node.departmentColor || '#94a3b8'" (focus)="chartState.saveHistory()" (input)="updateColorHex('departmentColor', $event)" class="w-full text-xs font-mono outline-none text-slate-700 dark:text-slate-300 bg-transparent uppercase" maxlength="7">
+                          </div>
+                       </div>
+                   }
+                </div>
+
+                @if (node.type !== 'note') {
+                    <div>
+                       <div class="flex justify-between items-center mb-1">
+                         <label class="text-[10px] text-slate-400 font-semibold">Ancho de Borde</label>
+                         <span class="text-[10px] text-slate-500 font-mono">{{node.borderWidth || 0}}px</span>
+                       </div>
+                       <input type="range" min="0" max="8" step="1" [value]="node.borderWidth || 0" (focus)="chartState.saveHistory()" (input)="updateBorderWidth($event)" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                }
+
+                @if ((node.type === 'shape' && (!node.shapeType || node.shapeType === 'rectangle')) || node.type === 'text') {
+                  <div>
+                      <div class="flex justify-between items-center mb-1">
+                        <label class="text-[10px] text-slate-400 font-semibold">Radio de Esquina</label>
+                        <span class="text-[10px] text-slate-500 font-mono">{{node.borderRadius || 0}}px</span>
+                      </div>
+                      <input type="range" min="0" max="50" step="1" [value]="node.borderRadius || 0" (focus)="chartState.saveHistory()" (input)="updateBorderRadius($event)" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                  </div>
+                }
+              </div>
+
+              <!-- Actions -->
+              <div class="pt-2 space-y-3">
+                 @if (node.type !== 'note' && node.type !== 'shape' && node.type !== 'group' && node.type !== 'text') {
+                     <button (click)="addMember()" class="w-full py-2.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
+                        <span class="material-icons-round text-lg">add_circle_outline</span> Añadir Hijo
+                     </button>
+                 }
+                 <button (click)="deleteNode()" class="w-full py-2.5 rounded border border-red-200 dark:border-red-900/30 text-red-500 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center justify-center gap-2">
+                    <span class="material-icons-round text-lg">delete_outline</span> Eliminar Nodo
+                 </button>
+              </div>
+          </div>
+        </div>
+      } @else if (chartState.selectedEdgeId()) {
+          <div class="p-6 h-full flex flex-col items-center justify-center text-center">
+             <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4">
+               <span class="material-icons-round text-3xl text-blue-500">timeline</span>
+             </div>
+             <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">Conexión Seleccionada</h2>
+             <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">Presiona Suprimir para eliminar</p>
+             <button 
+                (click)="chartState.deleteSelectedEdge()"
+                class="mt-6 w-full py-2.5 rounded border border-red-200 dark:border-red-900/30 text-red-500 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center justify-center gap-2"
+              >
+                 <span class="material-icons-round text-lg">link_off</span>
+                 Desvincular Nodos
+              </button>
+          </div>
+      } @else {
+        <div class="h-full flex flex-col items-center justify-center p-6 text-center text-slate-400 dark:text-slate-500">
+           <span class="material-icons-round text-4xl mb-2 opacity-50">touch_app</span>
+           <p class="text-sm">Selecciona un nodo o conexión</p>
+           @if (chartState.drawings().length > 0) {
+               <button (click)="chartState.clearDrawings()" class="mt-4 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-sm font-medium transition-colors">
+                  Limpiar Dibujos
+               </button>
+           }
+        </div>
+      }
+    </aside>
+  </div>
+</div>
+
+<!-- Shortcuts Modal -->
+@if (showShortcutsModal()) {
+  <div class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" (click)="toggleShortcutsModal()"></div>
+    
+    <!-- Modal Content -->
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col relative z-10 animate-in fade-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
+       
+       <div class="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
+          <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+             <span class="material-icons-round text-blue-500">keyboard</span>
+             Atajos de Teclado
+          </h2>
+          <button class="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors" (click)="toggleShortcutsModal()">
+             <span class="material-icons-round">close</span>
+          </button>
+       </div>
+
+       <div class="overflow-y-auto p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+             @for (group of shortcutsList; track group.category) {
+               <div>
+                  <h3 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">{{ group.category }}</h3>
+                  <div class="space-y-3">
+                     @for (item of group.items; track item.key) {
+                        <div class="flex items-center justify-between">
+                           <span class="text-sm text-slate-600 dark:text-slate-300">{{ item.desc }}</span>
+                           <code class="px-2 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-semibold text-slate-700 dark:text-slate-200 font-mono">{{ item.key }}</code>
+                        </div>
+                     }
+                  </div>
+               </div>
+             }
+          </div>
+       </div>
+       
+       <div class="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400">
+          Los atajos pueden variar ligeramente dependiendo de tu Sistema Operativo (Ctrl vs Cmd).
+       </div>
+    </div>
+  </div>
+}
